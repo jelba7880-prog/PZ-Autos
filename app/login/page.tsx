@@ -43,7 +43,7 @@ function LoginForm() {
     <div className="min-h-screen flex items-center justify-center bg-bg-base px-4">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <Wordmark />
+          <Wordmark priority />
         </div>
         <form
           onSubmit={handleSubmit}

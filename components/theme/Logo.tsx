@@ -1,63 +1,30 @@
+import Image from 'next/image'
 import { cn } from '@/lib/utils'
-
-// Inline-SVG recreation of the PZ Autos mark (three descending signal-red
-// bars + "PZ") built from the brand kit images shared in chat. Those never
-// landed as actual files in this environment (pasted inline, not uploaded),
-// so this is a faithful stand-in — swap for the authoritative PNGs the
-// moment they're available as real files, rather than trusting a
-// hand-recreation to pixel-match forever.
-
-interface MarkProps {
-  className?: string
-  tone?: 'dark' | 'light'
-}
-
-export function PZMark({ className, tone = 'dark' }: MarkProps) {
-  const textColor = tone === 'dark' ? '#141414' : '#FFFFFF'
-  return (
-    <svg viewBox="0 0 120 60" className={cn('h-8 w-auto', className)} aria-hidden="true">
-      <rect x="0" y="6" width="26" height="9" fill="#D0121B" />
-      <rect x="9" y="24" width="17" height="9" fill="#D0121B" />
-      <rect x="18" y="42" width="8" height="9" fill="#D0121B" />
-      <text
-        x="34"
-        y="45"
-        fontFamily="Archivo, Helvetica, Arial, sans-serif"
-        fontWeight="900"
-        fontSize="48"
-        fill={textColor}
-      >
-        PZ
-      </text>
-    </svg>
-  )
-}
 
 interface WordmarkProps {
   className?: string
   tone?: 'dark' | 'light'
+  // Pass true only at a call site that's the single above-the-fold
+  // instance on its page (PublicHeader, the login form) — next/image logs
+  // an LCP warning without it there. Never set it on PublicFooter, which
+  // always renders alongside one of those on the same page.
+  priority?: boolean
 }
 
-export function Wordmark({ className, tone = 'dark' }: WordmarkProps) {
-  const textColor = tone === 'dark' ? '#141414' : '#FFFFFF'
-  const subColor = tone === 'dark' ? '#5B6470' : '#8B95A6'
+// tone describes the wordmark's text color, matching call sites written
+// before this swapped to real assets: tone="dark" (default) is dark ink on
+// a light background (logo-light.png), tone="light" is white text on the
+// site's #141414 ink background (logo-dark.png).
+export function Wordmark({ className, tone = 'dark', priority = false }: WordmarkProps) {
+  const src = tone === 'light' ? '/logo-dark.png' : '/logo-light.png'
   return (
-    <div className={cn('inline-flex items-center gap-2.5', className)}>
-      <PZMark tone={tone} className="h-7 shrink-0" />
-      <div className="leading-none">
-        <p
-          className="font-display font-bold tracking-wide text-lg"
-          style={{ color: textColor }}
-        >
-          PAZOGU
-        </p>
-        <p
-          className="font-body font-semibold text-[9px] tracking-[0.3em]"
-          style={{ color: subColor }}
-        >
-          AUTOMOBILES
-        </p>
-      </div>
-    </div>
+    <Image
+      src={src}
+      alt="Pazogu Automobiles"
+      width={1000}
+      height={180}
+      priority={priority}
+      className={cn('h-8 w-auto', className)}
+    />
   )
 }

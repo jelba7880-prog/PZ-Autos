@@ -23,6 +23,19 @@ export const metadata: Metadata = {
   },
   description:
     'Verified cars sourced from vetted dealerships and individuals across Lagos — direct WhatsApp access to the owner.',
+  icons: {
+    // No media query = default/fallback, also matches light mode explicitly.
+    // Dark-mode browsers (tab bar, bookmarks, PWA icon) get the dark-bg mark
+    // instead so it doesn't sit as a stray white square in dark chrome.
+    icon: [
+      { url: '/icon-512.png', type: 'image/png' },
+      {
+        url: '/icon-512-dark.png',
+        type: 'image/png',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
