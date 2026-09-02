@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* This @theme block keeps `inline` (required for the next/font self
+   references below to resolve). Colours map to var(--token) rather than
+   literal hex so the semantic layer in :root stays the single source of
+   truth — this is a STRUCTURE ported from the reference app, not its
+   values; every value below is PZ Autos's own brand kit. */
+@theme inline {
+  --color-ink: var(--ink);
+  --color-signal-red: var(--signal-red);
+  --color-bg-base: var(--bg-base);
+  --color-body-text: var(--body-text);
+  --color-text-on-dark: var(--text-on-dark);
+  --color-text-muted: var(--text-muted);
+  --color-hairline: var(--hairline);
+  --color-placeholder-a: var(--placeholder-a);
+  --color-placeholder-b: var(--placeholder-b);
+
+  /* Status/freshness — deliberately NOT red anywhere (see brand ratio
+     constraint: red is reserved for one CTA per screen). */
+  --color-status-reserved: var(--status-reserved);
+  --color-status-sold: var(--status-sold);
+
+  --font-display: var(--font-archivo), Helvetica, Arial, sans-serif;
+  --font-wordmark: var(--font-archivo), Helvetica, Arial, sans-serif;
+  --font-body: var(--font-barlow), Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root {
+  --ink: #141414;
+  --signal-red: #d0121b;
+  --bg-base: #ffffff;
+  --body-text: #1b222c;
+  --text-on-dark: #8b95a6;
+  --text-muted: #5b6470;
+  --hairline: #e4e7ec;
+  --placeholder-a: #e8ecf2;
+  --placeholder-b: #f4f6f9;
+
+  /* Reserved uses ink, not a status colour, per the brand ratio constraint
+     (status badges must never default to red). Sold uses a muted treatment
+     — archived, not a live status. */
+  --status-reserved: var(--ink);
+  --status-sold: var(--text-muted);
+
+  color-scheme: light;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--body-text);
+}
+
+/* Diagonal stripe pair used for image-slot placeholders (no photo yet). */
+.placeholder-stripes {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--placeholder-a),
+    var(--placeholder-a) 10px,
+    var(--placeholder-b) 10px,
+    var(--placeholder-b) 20px
+  );
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  a:active,
+  button:active,
+  [role="button"]:active {
+    scale: 1 !important;
+  }
+}

@@ -1,0 +1,38 @@
+import { formatMileage, toDisplayCase } from '@/lib/formatters'
+import type { PublicCar } from '@/lib/showcase/types'
+
+interface SpecRow {
+  label: string
+  value: string | null
+}
+
+function buildSpecRows(car: PublicCar): SpecRow[] {
+  return [
+    { label: 'Mileage', value: formatMileage(car.mileage_km) },
+    { label: 'Transmission', value: toDisplayCase(car.transmission) || null },
+    { label: 'Fuel', value: toDisplayCase(car.fuel_type) || null },
+    { label: 'Body type', value: toDisplayCase(car.body_type) || null },
+    { label: 'Engine', value: car.engine },
+    { label: 'Drivetrain', value: toDisplayCase(car.drivetrain) || null },
+    { label: 'Exterior', value: toDisplayCase(car.exterior_colour) || null },
+    { label: 'Interior', value: toDisplayCase(car.interior_colour) || null },
+    { label: 'Condition', value: toDisplayCase(car.condition) || null },
+    { label: 'Location', value: car.location_area },
+  ].filter((row): row is SpecRow => Boolean(row.value))
+}
+
+export function SpecList({ car }: { car: PublicCar }) {
+  const rows = buildSpecRows(car)
+  if (rows.length === 0) return null
+
+  return (
+    <dl className="divide-y divide-hairline border-y border-hairline">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center justify-between py-3">
+          <dt className="font-body text-sm text-text-muted">{row.label}</dt>
+          <dd className="font-body font-semibold text-sm text-ink">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
