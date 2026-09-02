@@ -14,6 +14,7 @@ export interface PublicCar {
   exterior_colour: string | null
   interior_colour: string | null
   engine: string | null
+  engine_layout: string | null
   drivetrain: string | null
   condition: string | null
   description: string | null

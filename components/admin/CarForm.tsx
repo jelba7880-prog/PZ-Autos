@@ -4,15 +4,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SupplierPicker } from './SupplierPicker'
 import { ImageUploader, type PendingImage } from './ImageUploader'
+import { MakeModelFields } from './MakeModelFields'
+import { ConstrainedSelect } from './ConstrainedSelect'
+import { Field } from './FormField'
 import { createCarWithImages } from '@/lib/supabase/storage'
 import { generateCarSlug } from '@/lib/slugify'
+import { buildCarFormSchema, formatCarFormErrors } from '@/lib/carFormSchema'
+import { BODY_TYPES, DEFAULT_FUEL_TYPE, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
 import type { Supplier } from '@/lib/supabase/types'
 
 interface CarFormProps {
   suppliers: Pick<Supplier, 'id' | 'name' | 'supplier_type'>[]
 }
 
-const CURRENT_YEAR = new Date().getFullYear()
+const YEAR_OPTIONS = getYearOptions()
 
 export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const router = useRouter()
@@ -23,14 +28,20 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [make, setMake] = useState('')
+  const [model, setModel] = useState('')
+  const [year, setYear] = useState('')
+  const [bodyType, setBodyType] = useState('')
+  const [transmission, setTransmission] = useState('')
+  const [fuelType, setFuelType] = useState<string>(DEFAULT_FUEL_TYPE)
+  const [drivetrain, setDrivetrain] = useState('')
+  const [engineLayout, setEngineLayout] = useState('')
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
 
     const form = new FormData(e.currentTarget)
-    const make = String(form.get('make') ?? '').trim()
-    const model = String(form.get('model') ?? '').trim()
-    const year = Number(form.get('year'))
     const askingPrice = Number(form.get('asking_price_ngn'))
     const costPriceRaw = form.get('cost_price_ngn')
     const status = String(form.get('status') ?? 'draft') as 'draft' | 'available' | 'reserved'
@@ -40,8 +51,23 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       setError('Select or create a supplier')
       return
     }
-    if (!make || !model || !year || !askingPrice) {
-      setError('Make, model, year and asking price are required')
+
+    const parsed = buildCarFormSchema().safeParse({
+      make,
+      model,
+      year,
+      body_type: bodyType,
+      transmission,
+      fuel_type: fuelType,
+      drivetrain,
+      engine_layout: engineLayout,
+    })
+    if (!parsed.success) {
+      setError(formatCarFormErrors(parsed.error))
+      return
+    }
+    if (!askingPrice) {
+      setError('Asking price is required')
       return
     }
     if (images.length === 0) {
@@ -52,25 +78,26 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
     setSubmitting(true)
 
     try {
-      const slug = generateCarSlug(year, make, model)
+      const slug = generateCarSlug(parsed.data.year, parsed.data.make, parsed.data.model)
 
       await createCarWithImages(
         folderId,
         {
           slug,
           supplier_id: supplierId,
-          make,
-          model,
-          year,
+          make: parsed.data.make,
+          model: parsed.data.model,
+          year: parsed.data.year,
           trim: (form.get('trim') as string) || null,
-          body_type: (form.get('body_type') as string) || null,
-          transmission: (form.get('transmission') as string) || null,
-          fuel_type: (form.get('fuel_type') as string) || null,
+          body_type: parsed.data.body_type,
+          transmission: parsed.data.transmission,
+          fuel_type: parsed.data.fuel_type,
           mileage_km: form.get('mileage_km') ? Number(form.get('mileage_km')) : null,
           exterior_colour: (form.get('exterior_colour') as string) || null,
           interior_colour: (form.get('interior_colour') as string) || null,
           engine: (form.get('engine') as string) || null,
-          drivetrain: (form.get('drivetrain') as string) || null,
+          engine_layout: parsed.data.engine_layout,
+          drivetrain: parsed.data.drivetrain,
           condition: (form.get('condition') as string) || null,
           description: (form.get('description') as string) || null,
           key_features: keyFeaturesRaw
@@ -117,10 +144,22 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       </Field>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Make"><Input name="make" required /></Field>
-        <Field label="Model"><Input name="model" required /></Field>
+        <MakeModelFields make={make} model={model} onMakeChange={setMake} onModelChange={setModel} />
         <Field label="Year">
-          <Input name="year" type="number" min={1980} max={CURRENT_YEAR + 1} required />
+          <select
+            name="year"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
+            className="w-full border border-hairline rounded-lg px-3 py-2 font-body text-sm text-ink"
+          >
+            <option value="">Select year…</option>
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
 
@@ -131,24 +170,65 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
 
       <div className="grid grid-cols-3 gap-3">
         <Field label="Trim"><Input name="trim" /></Field>
-        <Field label="Body type"><Input name="body_type" placeholder="Saloon, SUV…" /></Field>
+        <Field label="Body type">
+          <ConstrainedSelect
+            name="body_type"
+            options={BODY_TYPES}
+            value={bodyType}
+            onChange={setBodyType}
+            placeholder="Select body type…"
+          />
+        </Field>
         <Field label="Condition"><Input name="condition" /></Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Transmission"><Input name="transmission" placeholder="Automatic" /></Field>
-        <Field label="Fuel type"><Input name="fuel_type" placeholder="Petrol" /></Field>
+        <Field label="Transmission">
+          <ConstrainedSelect
+            name="transmission"
+            options={TRANSMISSIONS}
+            value={transmission}
+            onChange={setTransmission}
+            placeholder="Select transmission…"
+          />
+        </Field>
+        <Field label="Fuel type">
+          <ConstrainedSelect
+            name="fuel_type"
+            options={FUEL_TYPES}
+            value={fuelType}
+            onChange={setFuelType}
+            placeholder="Select fuel type…"
+          />
+        </Field>
         <Field label="Mileage (km)"><Input name="mileage_km" type="number" min={0} /></Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <Field label="Exterior colour"><Input name="exterior_colour" /></Field>
         <Field label="Interior colour"><Input name="interior_colour" /></Field>
-        <Field label="Drivetrain"><Input name="drivetrain" placeholder="AWD, FWD…" /></Field>
+        <Field label="Drivetrain">
+          <ConstrainedSelect
+            name="drivetrain"
+            options={DRIVETRAINS}
+            value={drivetrain}
+            onChange={setDrivetrain}
+            placeholder="Select drivetrain…"
+          />
+        </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Engine"><Input name="engine" /></Field>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Engine"><Input name="engine" placeholder="e.g. 3.5L Twin-Turbo" /></Field>
+        <Field label="Engine layout">
+          <ConstrainedSelect
+            name="engine_layout"
+            options={ENGINE_LAYOUTS}
+            value={engineLayout}
+            onChange={setEngineLayout}
+            placeholder="Select engine layout…"
+          />
+        </Field>
         <Field label="Location (LGA — never a street address)"><Input name="location_area" placeholder="Ikeja" /></Field>
       </div>
 
@@ -164,10 +244,16 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="VIN (admin only)"><Input name="vin" /></Field>
-        <Field label="Registration plate (admin only)"><Input name="registration_plate" /></Field>
-      </div>
+      <Field label="VIN (admin only)"><Input name="vin" /></Field>
+
+      <details className="rounded-lg border border-hairline px-3 py-2">
+        <summary className="font-body text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer">
+          Registration plate (optional, admin only)
+        </summary>
+        <div className="mt-2">
+          <Input name="registration_plate" />
+        </div>
+      </details>
 
       <Field label="Acquisition notes (admin only)">
         <textarea
@@ -199,17 +285,6 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
         {submitting ? 'Saving…' : 'Save car'}
       </button>
     </form>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block font-body text-xs font-semibold uppercase tracking-wide text-text-muted mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
   )
 }
 
