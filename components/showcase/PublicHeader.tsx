@@ -20,7 +20,7 @@ export function PublicHeader({ showBackButton = false }: PublicHeaderProps) {
             </Link>
           )}
           <Link href="/cars">
-            <Wordmark tone="light" />
+            <Wordmark tone="light" priority />
           </Link>
         </div>
 
