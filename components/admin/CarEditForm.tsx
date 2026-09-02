@@ -4,13 +4,20 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ImageUploader, type PendingImage } from './ImageUploader'
+import { MakeModelFields } from './MakeModelFields'
+import { ConstrainedSelect } from './ConstrainedSelect'
+import { Field } from './FormField'
 import { getCarImagePublicUrl } from '@/lib/images'
+import { buildCarFormSchema, formatCarFormErrors } from '@/lib/carFormSchema'
+import { BODY_TYPES, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
 import type { Car, CarImage } from '@/lib/supabase/types'
 
 interface CarEditFormProps {
   car: Car
   images: CarImage[]
 }
+
+const YEAR_OPTIONS = getYearOptions()
 
 export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
   const router = useRouter()
@@ -26,29 +33,66 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
   const [status, setStatus] = useState(car.status)
   const [archiveReason, setArchiveReason] = useState(car.archive_reason ?? '')
 
+  const [make, setMake] = useState(car.make)
+  const [model, setModel] = useState(car.model)
+  // The year dropdown only spans MIN_YEAR..CURRENT_YEAR+1; a record saved
+  // outside that window (or before this dropdown existed) still needs to
+  // show its real value rather than silently falling back to blank.
+  const [year, setYear] = useState(String(car.year))
+  const [bodyType, setBodyType] = useState(car.body_type ?? '')
+  const [transmission, setTransmission] = useState(car.transmission ?? '')
+  const [fuelType, setFuelType] = useState(car.fuel_type ?? '')
+  const [drivetrain, setDrivetrain] = useState(car.drivetrain ?? '')
+  const [engineLayout, setEngineLayout] = useState(car.engine_layout ?? '')
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setSaving(true)
     setError(null)
 
     const form = new FormData(e.currentTarget)
+
+    const parsed = buildCarFormSchema({
+      body_type: car.body_type,
+      transmission: car.transmission,
+      fuel_type: car.fuel_type,
+      drivetrain: car.drivetrain,
+      engine_layout: car.engine_layout,
+    }).safeParse({
+      make,
+      model,
+      year,
+      body_type: bodyType,
+      transmission,
+      fuel_type: fuelType,
+      drivetrain,
+      engine_layout: engineLayout,
+    })
+
+    if (!parsed.success) {
+      setError(formatCarFormErrors(parsed.error))
+      setSaving(false)
+      return
+    }
+
     const supabase = createClient()
 
     const { error: updateError } = await supabase
       .from('cars')
       .update({
-        make: String(form.get('make')),
-        model: String(form.get('model')),
-        year: Number(form.get('year')),
+        make: parsed.data.make,
+        model: parsed.data.model,
+        year: parsed.data.year,
         trim: (form.get('trim') as string) || null,
-        body_type: (form.get('body_type') as string) || null,
-        transmission: (form.get('transmission') as string) || null,
-        fuel_type: (form.get('fuel_type') as string) || null,
+        body_type: parsed.data.body_type,
+        transmission: parsed.data.transmission,
+        fuel_type: parsed.data.fuel_type,
         mileage_km: form.get('mileage_km') ? Number(form.get('mileage_km')) : null,
         exterior_colour: (form.get('exterior_colour') as string) || null,
         interior_colour: (form.get('interior_colour') as string) || null,
         engine: (form.get('engine') as string) || null,
-        drivetrain: (form.get('drivetrain') as string) || null,
+        engine_layout: parsed.data.engine_layout,
+        drivetrain: parsed.data.drivetrain,
         condition: (form.get('condition') as string) || null,
         description: (form.get('description') as string) || null,
         location_area: (form.get('location_area') as string) || null,
@@ -109,6 +153,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
   }
 
   const isTerminal = status === 'sold' || status === 'withdrawn'
+  const hasLegacyYear = !YEAR_OPTIONS.includes(car.year)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-2xl">
@@ -121,9 +166,26 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
       </Field>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Make"><Input name="make" defaultValue={car.make} required /></Field>
-        <Field label="Model"><Input name="model" defaultValue={car.model} required /></Field>
-        <Field label="Year"><Input name="year" type="number" defaultValue={car.year} required /></Field>
+        <MakeModelFields make={make} model={model} onMakeChange={setMake} onModelChange={setModel} />
+        <Field label="Year">
+          <select
+            name="year"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            required
+            className="w-full border border-hairline rounded-lg px-3 py-2 font-body text-sm text-ink"
+          >
+            <option value="">Select year…</option>
+            {hasLegacyYear && (
+              <option value={car.year}>{car.year} (existing value, outside current range)</option>
+            )}
+            {YEAR_OPTIONS.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -137,24 +199,70 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
 
       <div className="grid grid-cols-3 gap-3">
         <Field label="Trim"><Input name="trim" defaultValue={car.trim ?? ''} /></Field>
-        <Field label="Body type"><Input name="body_type" defaultValue={car.body_type ?? ''} /></Field>
+        <Field label="Body type">
+          <ConstrainedSelect
+            name="body_type"
+            options={BODY_TYPES}
+            value={bodyType}
+            onChange={setBodyType}
+            placeholder="Select body type…"
+            legacyValue={car.body_type}
+          />
+        </Field>
         <Field label="Condition"><Input name="condition" defaultValue={car.condition ?? ''} /></Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Transmission"><Input name="transmission" defaultValue={car.transmission ?? ''} /></Field>
-        <Field label="Fuel type"><Input name="fuel_type" defaultValue={car.fuel_type ?? ''} /></Field>
+        <Field label="Transmission">
+          <ConstrainedSelect
+            name="transmission"
+            options={TRANSMISSIONS}
+            value={transmission}
+            onChange={setTransmission}
+            placeholder="Select transmission…"
+            legacyValue={car.transmission}
+          />
+        </Field>
+        <Field label="Fuel type">
+          <ConstrainedSelect
+            name="fuel_type"
+            options={FUEL_TYPES}
+            value={fuelType}
+            onChange={setFuelType}
+            placeholder="Select fuel type…"
+            legacyValue={car.fuel_type}
+          />
+        </Field>
         <Field label="Mileage (km)"><Input name="mileage_km" type="number" defaultValue={car.mileage_km ?? ''} /></Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <Field label="Exterior colour"><Input name="exterior_colour" defaultValue={car.exterior_colour ?? ''} /></Field>
         <Field label="Interior colour"><Input name="interior_colour" defaultValue={car.interior_colour ?? ''} /></Field>
-        <Field label="Drivetrain"><Input name="drivetrain" defaultValue={car.drivetrain ?? ''} /></Field>
+        <Field label="Drivetrain">
+          <ConstrainedSelect
+            name="drivetrain"
+            options={DRIVETRAINS}
+            value={drivetrain}
+            onChange={setDrivetrain}
+            placeholder="Select drivetrain…"
+            legacyValue={car.drivetrain}
+          />
+        </Field>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Engine"><Input name="engine" defaultValue={car.engine ?? ''} /></Field>
+      <div className="grid grid-cols-3 gap-3">
+        <Field label="Engine"><Input name="engine" defaultValue={car.engine ?? ''} placeholder="e.g. 3.5L Twin-Turbo" /></Field>
+        <Field label="Engine layout">
+          <ConstrainedSelect
+            name="engine_layout"
+            options={ENGINE_LAYOUTS}
+            value={engineLayout}
+            onChange={setEngineLayout}
+            placeholder="Select engine layout…"
+            legacyValue={car.engine_layout}
+          />
+        </Field>
         <Field label="Location (LGA)"><Input name="location_area" defaultValue={car.location_area ?? ''} /></Field>
       </div>
 
@@ -167,12 +275,16 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         />
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="VIN (admin only)"><Input name="vin" defaultValue={car.vin ?? ''} /></Field>
-        <Field label="Registration plate (admin only)">
+      <Field label="VIN (admin only)"><Input name="vin" defaultValue={car.vin ?? ''} /></Field>
+
+      <details className="rounded-lg border border-hairline px-3 py-2" open={Boolean(car.registration_plate)}>
+        <summary className="font-body text-xs font-semibold uppercase tracking-wide text-text-muted cursor-pointer">
+          Registration plate (optional, admin only)
+        </summary>
+        <div className="mt-2">
           <Input name="registration_plate" defaultValue={car.registration_plate ?? ''} />
-        </Field>
-      </div>
+        </div>
+      </details>
 
       <Field label="Acquisition notes (admin only)">
         <textarea
@@ -217,17 +329,6 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         {saving ? 'Saving…' : 'Save changes'}
       </button>
     </form>
-  )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block font-body text-xs font-semibold uppercase tracking-wide text-text-muted mb-1">
-        {label}
-      </label>
-      {children}
-    </div>
   )
 }
 

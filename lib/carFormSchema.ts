@@ -1,0 +1,64 @@
+import { z } from 'zod'
+import {
+  BODY_TYPES,
+  CURRENT_YEAR,
+  DRIVETRAINS,
+  ENGINE_LAYOUTS,
+  FUEL_TYPES,
+  MIN_YEAR,
+  TRANSMISSIONS,
+} from './carOptions'
+
+// A car being edited may carry a value for one of these fields that predates
+// the dropdown (typed freely before this form was constrained, or imported
+// from a supplier's own listing). Rejecting it on save would either force
+// the admin to guess which new option it "really" means, or crash the form
+// — both worse than just keeping it selectable. So the enum each select is
+// validated against is the canonical list, widened to also accept that
+// car's own current value when it isn't already in the list. New selections
+// are still confined to the canonical options; only the untouched legacy
+// value is grandfathered in.
+function constrainedField<T extends readonly [string, ...string[]]>(options: T, legacyValue?: string | null) {
+  const allowed: [string, ...string[]] =
+    legacyValue && !(options as readonly string[]).includes(legacyValue) ? [...options, legacyValue] : [...options]
+
+  return z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() ? value.trim() : null),
+    z.enum(allowed).nullable()
+  )
+}
+
+export interface CarFormLegacyValues {
+  fuel_type?: string | null
+  transmission?: string | null
+  drivetrain?: string | null
+  engine_layout?: string | null
+  body_type?: string | null
+}
+
+export function buildCarFormSchema(legacy: CarFormLegacyValues = {}) {
+  return z.object({
+    make: z.string().trim().min(1, 'Make is required').max(60, 'Make is too long'),
+    model: z.string().trim().min(1, 'Model is required').max(60, 'Model is too long'),
+    year: z.coerce
+      .number()
+      .int('Year must be a whole number')
+      .min(MIN_YEAR, `Year must be ${MIN_YEAR} or later`)
+      .max(CURRENT_YEAR + 1, `Year cannot be later than ${CURRENT_YEAR + 1}`),
+    body_type: constrainedField(BODY_TYPES, legacy.body_type),
+    transmission: constrainedField(TRANSMISSIONS, legacy.transmission),
+    fuel_type: constrainedField(FUEL_TYPES, legacy.fuel_type),
+    drivetrain: constrainedField(DRIVETRAINS, legacy.drivetrain),
+    engine_layout: constrainedField(ENGINE_LAYOUTS, legacy.engine_layout),
+  })
+}
+
+export type CarFormValues = z.infer<ReturnType<typeof buildCarFormSchema>>
+
+// Both forms currently report one validation message at a time (existing
+// `error` state is a single string) — this collapses Zod's issue list into
+// that shape rather than introducing per-field error UI as a drive-by
+// change.
+export function formatCarFormErrors(error: z.ZodError): string {
+  return error.issues.map((issue) => issue.message).join(' ')
+}
