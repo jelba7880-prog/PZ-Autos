@@ -1,0 +1,36 @@
+import { notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { CarEditForm } from '@/components/admin/CarEditForm'
+import { formatCarTitle } from '@/lib/formatters'
+import type { Car, CarImage } from '@/lib/supabase/types'
+
+export const dynamic = 'force-dynamic'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export default async function EditCarPage({ params }: PageProps) {
+  const { id } = await params
+  const supabase = await createClient()
+
+  const { data: car } = await supabase.from('cars').select('*').eq('id', id).maybeSingle()
+  if (!car) notFound()
+
+  const { data: images } = await supabase
+    .from('car_images')
+    .select('*')
+    .eq('car_id', id)
+    .order('sort_order', { ascending: true })
+
+  const typedCar = car as Car
+
+  return (
+    <div>
+      <h1 className="font-display font-black text-2xl text-ink mb-6">
+        Edit {formatCarTitle(typedCar.make, typedCar.model, typedCar.year)}
+      </h1>
+      <CarEditForm car={typedCar} images={(images ?? []) as CarImage[]} />
+    </div>
+  )
+}
