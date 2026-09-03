@@ -12,7 +12,6 @@ function buildSpecRows(car: PublicCar): SpecRow[] {
     { label: 'Transmission', value: toDisplayCase(car.transmission) || null },
     { label: 'Fuel', value: toDisplayCase(car.fuel_type) || null },
     { label: 'Body type', value: toDisplayCase(car.body_type) || null },
-    { label: 'Engine', value: car.engine },
     { label: 'Engine layout', value: car.engine_layout },
     { label: 'Drivetrain', value: toDisplayCase(car.drivetrain) || null },
     { label: 'Exterior', value: toDisplayCase(car.exterior_colour) || null },

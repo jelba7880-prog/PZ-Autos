@@ -90,7 +90,6 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         mileage_km: form.get('mileage_km') ? Number(form.get('mileage_km')) : null,
         exterior_colour: (form.get('exterior_colour') as string) || null,
         interior_colour: (form.get('interior_colour') as string) || null,
-        engine: (form.get('engine') as string) || null,
         engine_layout: parsed.data.engine_layout,
         drivetrain: parsed.data.drivetrain,
         condition: (form.get('condition') as string) || null,
@@ -251,8 +250,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Engine"><Input name="engine" defaultValue={car.engine ?? ''} placeholder="e.g. 3.5L Twin-Turbo" /></Field>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Engine layout">
           <ConstrainedSelect
             name="engine_layout"
