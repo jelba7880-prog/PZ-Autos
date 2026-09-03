@@ -1,8 +1,10 @@
 import Link from 'next/link'
+import { Star, ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { StaleIndicator } from '@/components/admin/StaleIndicator'
 import { formatNGN, formatCarTitle } from '@/lib/formatters'
 import { setCarFeatured, moveFeaturedUp, moveFeaturedDown, markVerified } from './actions'
+import { cn } from '@/lib/utils'
 import type { CarWithSupplier } from '@/lib/supabase/types'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +23,8 @@ export default async function AdminInventoryPage() {
   if (error) throw error
 
   const typedCars = (cars ?? []) as unknown as CarWithSupplier[]
-  const featuredCount = typedCars.filter((c) => c.is_featured).length
+  const featuredIds = typedCars.filter((c) => c.is_featured).map((c) => c.id)
+  const featuredCount = featuredIds.length
 
   return (
     <div>
@@ -68,7 +71,11 @@ export default async function AdminInventoryPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-hairline">
-            {typedCars.map((car) => (
+            {typedCars.map((car) => {
+              const featuredIndex = car.is_featured ? featuredIds.indexOf(car.id) : -1
+              const canFeature = ['available', 'reserved'].includes(car.status)
+
+              return (
               <tr key={car.id}>
                 <td className="px-4 py-3 font-body text-sm text-ink font-semibold">
                   {formatCarTitle(car.make, car.model, car.year)}
@@ -94,26 +101,53 @@ export default async function AdminInventoryPage() {
                   </div>
                 </td>
                 <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <form action={setCarFeatured.bind(null, car.id, !car.is_featured)}>
                       <button
                         type="submit"
-                        disabled={!car.is_featured && !['available', 'reserved'].includes(car.status)}
-                        className="font-body text-xs font-semibold text-ink underline disabled:opacity-40 disabled:no-underline"
+                        disabled={!car.is_featured && !canFeature}
+                        aria-label={car.is_featured ? 'Remove from featured' : 'Add to featured'}
+                        title={
+                          car.is_featured
+                            ? 'Featured — click to remove'
+                            : canFeature
+                              ? 'Click to feature on the landing page'
+                              : 'Only available/reserved cars can be featured'
+                        }
+                        className={cn(
+                          'inline-flex items-center justify-center rounded-full p-1.5 border transition-colors',
+                          'disabled:opacity-30 disabled:cursor-not-allowed',
+                          car.is_featured
+                            ? 'bg-signal-red border-signal-red text-white'
+                            : 'border-hairline text-text-muted hover:border-ink hover:text-ink'
+                        )}
                       >
-                        {car.is_featured ? 'Unfeature' : 'Feature'}
+                        <Star size={14} fill={car.is_featured ? 'currentColor' : 'none'} />
                       </button>
                     </form>
                     {car.is_featured && (
                       <>
+                        <span className="font-body text-[10px] font-semibold text-text-muted tabular-nums w-4 text-center">
+                          {featuredIndex + 1}
+                        </span>
                         <form action={moveFeaturedUp.bind(null, car.id)}>
-                          <button type="submit" aria-label="Move up" className="text-text-muted hover:text-ink">
-                            ↑
+                          <button
+                            type="submit"
+                            aria-label="Move up"
+                            disabled={featuredIndex === 0}
+                            className="rounded p-0.5 text-text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ChevronUp size={14} />
                           </button>
                         </form>
                         <form action={moveFeaturedDown.bind(null, car.id)}>
-                          <button type="submit" aria-label="Move down" className="text-text-muted hover:text-ink">
-                            ↓
+                          <button
+                            type="submit"
+                            aria-label="Move down"
+                            disabled={featuredIndex === featuredIds.length - 1}
+                            className="rounded p-0.5 text-text-muted hover:text-ink disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ChevronDown size={14} />
                           </button>
                         </form>
                       </>
@@ -129,7 +163,8 @@ export default async function AdminInventoryPage() {
                   </Link>
                 </td>
               </tr>
-            ))}
+              )
+            })}
             {typedCars.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center font-body text-text-muted">
