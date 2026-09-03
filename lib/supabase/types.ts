@@ -38,7 +38,6 @@ export interface Car {
   key_features: string[] | null
   location_area: string | null
   vin: string | null
-  registration_plate: string | null
   cost_price_ngn: string | null
   asking_price_ngn: string
   status: CarStatus

@@ -101,7 +101,6 @@ export interface NewCarPayload {
   key_features?: string[] | null
   location_area?: string | null
   vin?: string | null
-  registration_plate?: string | null
   cost_price_ngn?: number | null
   asking_price_ngn: number
   status?: 'draft' | 'available' | 'reserved'
