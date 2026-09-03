@@ -25,8 +25,8 @@ export type Transmission = (typeof TRANSMISSIONS)[number]
 export const DRIVETRAINS = ['FWD', 'RWD', 'AWD', '4WD'] as const
 export type Drivetrain = (typeof DRIVETRAINS)[number]
 
-// Cylinder/motor layout — distinct from the free-text `engine` field, which
-// stays free text for displacement/turbo notes (e.g. "3.5L Twin-Turbo").
+// Cylinder/motor layout. Replaces the old free-text `engine` field (removed
+// via migration 20260902000006) rather than sitting alongside it.
 export const ENGINE_LAYOUTS = ['I3', 'I4', 'I5', 'I6', 'V6', 'V8', 'V10', 'V12', 'Electric'] as const
 export type EngineLayout = (typeof ENGINE_LAYOUTS)[number]
 
