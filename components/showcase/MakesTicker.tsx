@@ -1,3 +1,5 @@
+import { getMakeTypography } from '@/lib/showcase/makeTypography'
+
 // Renders the distinct makes currently in stock (see getActiveMakes) as a
 // looping horizontal ticker. Below MIN_MAKES_TO_LOOP a loop reads as
 // pointless (a single word repeating past itself), so we fall back to a
@@ -15,9 +17,7 @@ export function MakesTicker({ makes }: { makes: string[] }) {
     return (
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         {makes.map((make) => (
-          <span key={make} className="font-body text-sm font-semibold text-ink">
-            {make}
-          </span>
+          <MakeLabel key={make} make={make} />
         ))}
       </div>
     )
@@ -49,10 +49,34 @@ function MakesSet({ makes, ariaHidden }: { makes: string[]; ariaHidden?: boolean
   return (
     <div className="makes-ticker-set" aria-hidden={ariaHidden} data-ticker-dup={ariaHidden}>
       {makes.map((make, index) => (
-        <span key={`${make}-${index}`} className="font-body text-sm font-semibold text-ink">
-          {make}
-        </span>
+        <MakeLabel key={`${make}-${index}`} make={make} />
       ))}
     </div>
+  )
+}
+
+// Recognized makes render with wordmark-evoking styling (see
+// lib/showcase/makeTypography.ts); anything else — including free-typed
+// custom makes — falls through to the site's normal default type.
+function MakeLabel({ make }: { make: string }) {
+  const style = getMakeTypography(make)
+
+  if (!style) {
+    return <span className="font-body text-sm font-semibold text-ink">{make}</span>
+  }
+
+  return (
+    <span
+      className="text-sm text-ink"
+      style={{
+        fontFamily: style.fontFamily === 'archivo' ? 'var(--font-archivo)' : 'var(--font-barlow)',
+        fontWeight: style.fontWeight,
+        letterSpacing: style.letterSpacing,
+        textTransform: style.textTransform,
+        fontStyle: style.fontStyle,
+      }}
+    >
+      {make}
+    </span>
   )
 }
