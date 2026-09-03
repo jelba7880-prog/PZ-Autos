@@ -5,6 +5,7 @@ import { PublicHeader } from '@/components/showcase/PublicHeader'
 import { PublicFooter } from '@/components/showcase/PublicFooter'
 import { PublicCarCard } from '@/components/showcase/PublicCarCard'
 import { SectionLabel } from '@/components/showcase/SectionLabel'
+import { MakesTicker } from '@/components/showcase/MakesTicker'
 import { getFeaturedCars, getActiveMakes } from '@/lib/showcase/queries'
 import { generateWhatsAppLink } from '@/lib/whatsapp'
 
@@ -68,14 +69,12 @@ export default async function LandingPage() {
       {makes.length > 0 && (
         <section className="border-b border-hairline bg-bg-base">
           <div className="mx-auto max-w-[1280px] px-4 md:px-10 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <span className="font-body text-[11px] font-semibold uppercase tracking-[0.3em] text-text-muted">
+            <span className="font-body text-[11px] font-semibold uppercase tracking-[0.3em] text-text-muted shrink-0">
               Currently available
             </span>
-            {makes.map((make) => (
-              <span key={make} className="font-body text-sm font-semibold text-ink">
-                {make}
-              </span>
-            ))}
+            <div className="min-w-0 flex-1">
+              <MakesTicker makes={makes} />
+            </div>
           </div>
         </section>
       )}

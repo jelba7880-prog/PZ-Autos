@@ -78,3 +78,65 @@ body {
     scale: 1 !important;
   }
 }
+
+/* Makes ticker (landing page "Currently available" strip) — infinite
+   horizontal loop built from two identical sets side by side, translated
+   by exactly -50% so the loop point is invisible. Edge fade uses an alpha
+   mask, not a color overlay, so it stays token-free. */
+@keyframes makes-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.makes-ticker-viewport {
+  overflow: hidden;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 8%,
+    black 92%,
+    transparent
+  );
+}
+
+.makes-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: makes-ticker-scroll var(--makes-ticker-duration, 20s) linear infinite;
+}
+
+.makes-ticker-viewport:hover .makes-ticker-track,
+.makes-ticker-viewport:focus-within .makes-ticker-track {
+  animation-play-state: paused;
+}
+
+.makes-ticker-set {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .makes-ticker-track {
+    animation: none;
+    width: auto;
+    flex-wrap: wrap;
+  }
+
+  .makes-ticker-set[data-ticker-dup="true"] {
+    display: none;
+  }
+}

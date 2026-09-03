@@ -11,7 +11,9 @@ const archivo = Archivo({
 
 const barlow = Barlow({
   subsets: ['latin'],
-  weight: ['400', '600'],
+  // 300 is used only by MakeTypography's brand-wordmark styling in
+  // MakesTicker — the site's default body copy stays 400/600.
+  weight: ['300', '400', '600'],
   variable: '--font-barlow',
   display: 'swap',
 })
