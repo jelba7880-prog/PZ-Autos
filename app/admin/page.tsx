@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Star, ChevronUp, ChevronDown } from 'lucide-react'
+import { ChevronUp, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { StaleIndicator } from '@/components/admin/StaleIndicator'
 import { formatNGN, formatCarTitle } from '@/lib/formatters'
@@ -105,6 +105,8 @@ export default async function AdminInventoryPage() {
                     <form action={setCarFeatured.bind(null, car.id, !car.is_featured)}>
                       <button
                         type="submit"
+                        role="switch"
+                        aria-checked={car.is_featured}
                         disabled={!car.is_featured && !canFeature}
                         aria-label={car.is_featured ? 'Remove from featured' : 'Add to featured'}
                         title={
@@ -115,14 +117,17 @@ export default async function AdminInventoryPage() {
                               : 'Only available/reserved cars can be featured'
                         }
                         className={cn(
-                          'inline-flex items-center justify-center rounded-full p-1.5 border transition-colors',
+                          'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors',
                           'disabled:opacity-30 disabled:cursor-not-allowed',
-                          car.is_featured
-                            ? 'bg-signal-red border-signal-red text-white'
-                            : 'border-hairline text-text-muted hover:border-ink hover:text-ink'
+                          car.is_featured ? 'bg-signal-red' : 'bg-hairline'
                         )}
                       >
-                        <Star size={14} fill={car.is_featured ? 'currentColor' : 'none'} />
+                        <span
+                          className={cn(
+                            'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform',
+                            car.is_featured ? 'translate-x-[18px]' : 'translate-x-1'
+                          )}
+                        />
                       </button>
                     </form>
                     {car.is_featured && (
