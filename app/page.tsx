@@ -6,7 +6,8 @@ import { PublicFooter } from '@/components/showcase/PublicFooter'
 import { PublicCarCard } from '@/components/showcase/PublicCarCard'
 import { SectionLabel } from '@/components/showcase/SectionLabel'
 import { MakesTicker } from '@/components/showcase/MakesTicker'
-import { getFeaturedCars, getActiveMakes } from '@/lib/showcase/queries'
+import { getFeaturedCars } from '@/lib/showcase/queries'
+import { CAR_MAKES } from '@/lib/carOptions'
 import { generateWhatsAppLink } from '@/lib/whatsapp'
 
 const OWNER_PHONE = process.env.NEXT_PUBLIC_OWNER_PHONE ?? '+2348116563757'
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
 export const revalidate = 0
 
 export default async function LandingPage() {
-  const [featured, makes] = await Promise.all([getFeaturedCars(), getActiveMakes()])
+  const featured = await getFeaturedCars()
 
   const whatsappLink = generateWhatsAppLink(
     OWNER_PHONE,
@@ -65,15 +66,19 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Brands currently available (query-derived, never hardcoded) ── */}
-      {makes.length > 0 && (
+      {/* ── Brands we deal in — the permanent Make list, not live stock ──
+          Sourced from CAR_MAKES (lib/carOptions.ts), the same list the
+          admin Make field offers. This is a standing brand showcase, not
+          an inventory snapshot — it doesn't shrink to whatever happens to
+          be in stock right now. */}
+      {CAR_MAKES.length > 0 && (
         <section className="border-b border-hairline bg-bg-base">
-          <div className="mx-auto max-w-[1280px] px-4 md:px-10 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="mx-auto max-w-[1280px] px-4 md:px-10 py-5 flex flex-wrap items-center gap-x-6 gap-y-3">
             <span className="font-body text-[11px] font-semibold uppercase tracking-[0.3em] text-text-muted shrink-0">
-              Currently available
+              Brands we deal in
             </span>
             <div className="min-w-0 flex-1">
-              <MakesTicker makes={makes} />
+              <MakesTicker makes={CAR_MAKES} />
             </div>
           </div>
         </section>
