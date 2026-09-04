@@ -67,25 +67,6 @@ export async function getFeaturedCars(): Promise<PublicCarCardData[]> {
   }))
 }
 
-// "Brands on the lot" on the landing page must reflect real, current
-// inventory — a hardcoded brand list drifts from reality the moment stock
-// changes. Derived from active (available/reserved) listings only; a sold
-// car's make shouldn't keep advertising stock that no longer exists.
-export async function getActiveMakes(): Promise<string[]> {
-  const supabase = createPublicClient()
-
-  const { data, error } = await supabase
-    .from('public_cars_view')
-    .select('make')
-    .in('status', ['available', 'reserved'])
-
-  if (error) throw error
-  if (!data) return []
-
-  const makes = new Set((data as Pick<PublicCar, 'make'>[]).map((c) => c.make))
-  return Array.from(makes).sort()
-}
-
 export async function getPublicCarBySlug(slug: string): Promise<PublicCarWithImages | null> {
   const supabase = createPublicClient()
 

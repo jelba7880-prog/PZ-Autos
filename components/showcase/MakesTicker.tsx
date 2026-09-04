@@ -1,10 +1,10 @@
 import { getMakeTypography } from '@/lib/showcase/makeTypography'
 
-// Renders the distinct makes currently in stock (see getActiveMakes) as a
-// looping horizontal ticker. Below MIN_MAKES_TO_LOOP a loop reads as
-// pointless (a single word repeating past itself), so we fall back to a
-// static wrapped row instead of animating.
-const MIN_MAKES_TO_LOOP = 2
+// Renders the dealership's permanent brand list (CAR_MAKES — the same
+// source the admin Make field offers, see app/page.tsx) as a looping
+// horizontal ticker. This is a standing showcase, not an inventory
+// snapshot, so it's always long enough to loop — no sparse-list fallback
+// needed, just a guard against an empty source list.
 const MIN_SET_LENGTH = 8
 const SECONDS_PER_ITEM = 3.5
 const MIN_DURATION_S = 12
@@ -12,16 +12,6 @@ const MAX_DURATION_S = 60
 
 export function MakesTicker({ makes }: { makes: string[] }) {
   if (makes.length === 0) return null
-
-  if (makes.length < MIN_MAKES_TO_LOOP) {
-    return (
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        {makes.map((make) => (
-          <MakeLabel key={make} make={make} />
-        ))}
-      </div>
-    )
-  }
 
   // Repeat the source list until the set is wide enough that duplicating it
   // for the loop doesn't leave visible gaps at low make counts.
@@ -55,19 +45,25 @@ function MakesSet({ makes, ariaHidden }: { makes: string[]; ariaHidden?: boolean
   )
 }
 
+// Sized well above the section label (text-[11px]) and body copy
+// (text-sm) so this reads as a distinct showcase tier — but staying
+// under the h2 scale (text-2xl/3xl) used elsewhere on the page, so it
+// stays a supporting section rather than competing with real headings.
+//
 // Recognized makes render with wordmark-evoking styling (see
 // lib/showcase/makeTypography.ts); anything else — including free-typed
-// custom makes — falls through to the site's normal default type.
+// custom makes — falls through to the site's normal default type, just
+// sized to match the row it sits in.
 function MakeLabel({ make }: { make: string }) {
   const style = getMakeTypography(make)
 
   if (!style) {
-    return <span className="font-body text-sm font-semibold text-ink">{make}</span>
+    return <span className="font-body text-lg md:text-xl font-semibold text-ink">{make}</span>
   }
 
   return (
     <span
-      className="text-sm text-ink"
+      className="text-lg md:text-xl text-ink"
       style={{
         fontFamily: style.fontFamily === 'archivo' ? 'var(--font-archivo)' : 'var(--font-barlow)',
         fontWeight: style.fontWeight,

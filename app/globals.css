@@ -79,10 +79,10 @@ body {
   }
 }
 
-/* Makes ticker (landing page "Currently available" strip) — infinite
-   horizontal loop built from two identical sets side by side, translated
-   by exactly -50% so the loop point is invisible. Edge fade uses an alpha
-   mask, not a color overlay, so it stays token-free. */
+/* Makes ticker (landing page brand strip) — infinite horizontal loop
+   built from two identical sets side by side, translated by exactly
+   -50% so the loop point is invisible. Edge fade uses an alpha mask,
+   not a color overlay, so it stays token-free. */
 @keyframes makes-ticker-scroll {
   from {
     transform: translateX(0);
@@ -114,6 +114,16 @@ body {
   display: flex;
   width: max-content;
   animation: makes-ticker-scroll var(--makes-ticker-duration, 20s) linear infinite;
+  /* One-time entrance pause: sits static (no fill-mode, so the pre-delay
+     frame is just the element's normal untransformed layout) for 2s after
+     it paints, then starts scrolling. animation-delay only holds back the
+     first iteration, never the loop, so this can't reintroduce a pause on
+     every pass. Deliberately CSS-only — no JS timer, no 'use client'
+     boundary, no window 'load' listener — MakesTicker stays a server
+     component and the delay tracks when the ticker itself paints rather
+     than an unrelated, resource-dependent load event elsewhere on the
+     page. */
+  animation-delay: 2s;
 }
 
 .makes-ticker-viewport:hover .makes-ticker-track,
