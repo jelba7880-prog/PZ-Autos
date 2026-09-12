@@ -5,9 +5,7 @@ import { PublicHeader } from '@/components/showcase/PublicHeader'
 import { PublicFooter } from '@/components/showcase/PublicFooter'
 import { PublicCarCard } from '@/components/showcase/PublicCarCard'
 import { SectionLabel } from '@/components/showcase/SectionLabel'
-import { MakesTicker } from '@/components/showcase/MakesTicker'
 import { getFeaturedCars } from '@/lib/showcase/queries'
-import { CAR_MAKES } from '@/lib/carOptions'
 import { generateWhatsAppLink } from '@/lib/whatsapp'
 
 const OWNER_PHONE = process.env.NEXT_PUBLIC_OWNER_PHONE ?? '+2348116563757'
@@ -66,24 +64,6 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ── Brands we deal in — the permanent Make list, not live stock ──
-          Sourced from CAR_MAKES (lib/carOptions.ts), the same list the
-          admin Make field offers. This is a standing brand showcase, not
-          an inventory snapshot — it doesn't shrink to whatever happens to
-          be in stock right now. */}
-      {CAR_MAKES.length > 0 && (
-        <section className="border-b border-hairline bg-bg-base">
-          <div className="mx-auto max-w-[1280px] px-4 md:px-10 py-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <span className="font-body text-[11px] font-semibold uppercase tracking-[0.3em] text-text-muted shrink-0">
-              Brands we deal in
-            </span>
-            <div className="min-w-0 flex-1">
-              <MakesTicker makes={CAR_MAKES} />
-            </div>
-          </div>
-        </section>
-      )}
-
       {/* ── Featured (owner-curated only — no filters) ──────────────── */}
       <section className="mx-auto max-w-[1280px] px-4 md:px-10 py-14 md:py-20">
         <SectionLabel>Featured</SectionLabel>
@@ -119,38 +99,6 @@ export default async function LandingPage() {
         >
           View all inventory →
         </Link>
-      </section>
-
-      {/* ── Why Pazogu — verification-based trust story, not possession ── */}
-      <section className="bg-placeholder-b">
-        <div className="mx-auto max-w-[1280px] px-4 md:px-10 py-14 md:py-20">
-          <SectionLabel>Why Pazogu</SectionLabel>
-          <h2 className="font-display font-black text-2xl md:text-3xl text-ink mb-10">
-            What we actually check, every time
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <WhyCard
-              number="01"
-              title="Verified before listing"
-              body="Every car is checked against the seller's paperwork and current condition before it goes live — and re-confirmed with the seller on a regular schedule after that."
-            />
-            <WhyCard
-              number="02"
-              title="Price on the tag"
-              body="What you see is the price. No agent fees appearing later, no last-minute additions."
-            />
-            <WhyCard
-              number="03"
-              title="Documentation support"
-              body="Registration and transfer paperwork guided through to completion, alongside the seller."
-            />
-            <WhyCard
-              number="04"
-              title="Direct access"
-              body="You deal with the owner on WhatsApp — not a call centre, not a rotating sales desk."
-            />
-          </div>
-        </div>
       </section>
 
       {/* ── CTA band ─────────────────────────────────────────────────── */}
@@ -189,15 +137,5 @@ export default async function LandingPage() {
 
       <PublicFooter />
     </>
-  )
-}
-
-function WhyCard({ number, title, body }: { number: string; title: string; body: string }) {
-  return (
-    <div className="rounded-xl border border-hairline bg-bg-base p-5">
-      <span className="font-mono text-xs text-text-muted">{number}</span>
-      <h3 className="font-display font-bold text-ink text-base mt-2 mb-1.5">{title}</h3>
-      <p className="font-body text-sm text-text-muted leading-relaxed">{body}</p>
-    </div>
   )
 }
