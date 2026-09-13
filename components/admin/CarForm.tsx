@@ -9,6 +9,7 @@ import { ConstrainedSelect } from './ConstrainedSelect'
 import { SuggestionChip } from './SuggestionChip'
 import { Field } from './FormField'
 import { createCarWithImages } from '@/lib/supabase/storage'
+import { createClient } from '@/lib/supabase/client'
 import { generateCarSlug } from '@/lib/slugify'
 import { buildCarFormSchema, formatCarFormErrors } from '@/lib/carFormSchema'
 import { BODY_TYPES, CONDITIONS, DEFAULT_FUEL_TYPE, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
@@ -73,6 +74,9 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   // the FormData read did.
   const [exteriorColour, setExteriorColour] = useState('')
   const [interiorColour, setInteriorColour] = useState('')
+  const [status, setStatus] = useState<'draft' | 'available' | 'reserved'>('draft')
+  const [featureOnCreate, setFeatureOnCreate] = useState(false)
+  const canFeature = status !== 'draft'
 
   const [specSuggestions, setSpecSuggestions] = useState<SpecSuggestions>({})
   const [colourSuggestions, setColourSuggestions] = useState<ColourSuggestions>({})
@@ -176,7 +180,6 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
     const form = new FormData(e.currentTarget)
     const askingPrice = Number(form.get('asking_price_ngn'))
     const costPriceRaw = form.get('cost_price_ngn')
-    const status = String(form.get('status') ?? 'draft') as 'draft' | 'available' | 'reserved'
     const keyFeaturesRaw = String(form.get('key_features') ?? '')
 
     if (!supplierId) {
@@ -213,7 +216,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
     try {
       const slug = generateCarSlug(parsed.data.year, parsed.data.make, parsed.data.model)
 
-      await createCarWithImages(
+      const carId = await createCarWithImages(
         folderId,
         {
           slug,
@@ -248,6 +251,17 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           sort_order: index,
         }))
       )
+
+      if (featureOnCreate && canFeature) {
+        // The car row is already committed at this point — a failure here
+        // shouldn't undo the creation or block navigation, it just means
+        // the admin features it from /admin instead.
+        const { error: featureError } = await createClient().rpc('set_car_featured', {
+          p_car_id: carId,
+          p_featured: true,
+        })
+        if (featureError) console.error(featureError)
+      }
 
       router.push('/admin')
       router.refresh()
@@ -426,7 +440,8 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       <Field label="Status">
         <select
           name="status"
-          defaultValue="draft"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as typeof status)}
           className="border border-hairline rounded-lg px-3 py-2 font-body text-sm text-ink"
         >
           <option value="draft">Draft (not public yet)</option>
@@ -434,6 +449,22 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           <option value="reserved">Reserved</option>
         </select>
       </Field>
+
+      <label className="flex items-center gap-2 font-body text-sm text-ink">
+        <input
+          type="checkbox"
+          checked={featureOnCreate}
+          disabled={!canFeature}
+          onChange={(e) => setFeatureOnCreate(e.target.checked)}
+          className="disabled:opacity-40"
+        />
+        Feature on the homepage
+        {!canFeature && (
+          <span className="font-body text-xs text-text-muted">
+            (only available/reserved cars can be featured)
+          </span>
+        )}
+      </label>
 
       {error && <p className="font-body text-sm text-signal-red">{error}</p>}
 

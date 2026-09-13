@@ -49,7 +49,7 @@ export function PublicCarCard({ car }: PublicCarCardProps) {
             {formatMileage(car.mileage_km)} · {specLine}
           </p>
         )}
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mt-3">
           <span className="font-body font-semibold text-ink tabular-nums">
             {formatNGN(car.asking_price_ngn)}
           </span>
