@@ -45,7 +45,7 @@ export default async function AdminInventoryPage() {
         </p>
       )}
 
-      <div className="border border-hairline rounded-xl overflow-hidden">
+      <div className="border border-hairline rounded-xl overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-placeholder-b">
             <tr>
