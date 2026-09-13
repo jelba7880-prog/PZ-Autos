@@ -9,7 +9,7 @@ import { ConstrainedSelect } from './ConstrainedSelect'
 import { Field } from './FormField'
 import { getCarImagePublicUrl } from '@/lib/images'
 import { buildCarFormSchema, formatCarFormErrors } from '@/lib/carFormSchema'
-import { BODY_TYPES, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
+import { BODY_TYPES, CONDITIONS, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
 import type { Car, CarImage } from '@/lib/supabase/types'
 
 interface CarEditFormProps {
@@ -44,6 +44,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
   const [fuelType, setFuelType] = useState(car.fuel_type ?? '')
   const [drivetrain, setDrivetrain] = useState(car.drivetrain ?? '')
   const [engineLayout, setEngineLayout] = useState(car.engine_layout ?? '')
+  const [condition, setCondition] = useState(car.condition ?? '')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -58,6 +59,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
       fuel_type: car.fuel_type,
       drivetrain: car.drivetrain,
       engine_layout: car.engine_layout,
+      condition: car.condition,
     }).safeParse({
       make,
       model,
@@ -67,6 +69,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
       fuel_type: fuelType,
       drivetrain,
       engine_layout: engineLayout,
+      condition,
     })
 
     if (!parsed.success) {
@@ -83,7 +86,6 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         make: parsed.data.make,
         model: parsed.data.model,
         year: parsed.data.year,
-        trim: (form.get('trim') as string) || null,
         body_type: parsed.data.body_type,
         transmission: parsed.data.transmission,
         fuel_type: parsed.data.fuel_type,
@@ -92,7 +94,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         interior_colour: (form.get('interior_colour') as string) || null,
         engine_layout: parsed.data.engine_layout,
         drivetrain: parsed.data.drivetrain,
-        condition: (form.get('condition') as string) || null,
+        condition: parsed.data.condition,
         description: (form.get('description') as string) || null,
         location_area: (form.get('location_area') as string) || null,
         vin: (form.get('vin') as string) || null,
@@ -196,8 +198,7 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Trim"><Input name="trim" defaultValue={car.trim ?? ''} /></Field>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Body type">
           <ConstrainedSelect
             name="body_type"
@@ -208,7 +209,16 @@ export function CarEditForm({ car, images: initialImages }: CarEditFormProps) {
             legacyValue={car.body_type}
           />
         </Field>
-        <Field label="Condition"><Input name="condition" defaultValue={car.condition ?? ''} /></Field>
+        <Field label="Condition">
+          <ConstrainedSelect
+            name="condition"
+            options={CONDITIONS}
+            value={condition}
+            onChange={setCondition}
+            placeholder="Select condition…"
+            legacyValue={car.condition}
+          />
+        </Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

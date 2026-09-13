@@ -10,7 +10,7 @@ import { Field } from './FormField'
 import { createCarWithImages } from '@/lib/supabase/storage'
 import { generateCarSlug } from '@/lib/slugify'
 import { buildCarFormSchema, formatCarFormErrors } from '@/lib/carFormSchema'
-import { BODY_TYPES, DEFAULT_FUEL_TYPE, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
+import { BODY_TYPES, CONDITIONS, DEFAULT_FUEL_TYPE, DRIVETRAINS, ENGINE_LAYOUTS, FUEL_TYPES, TRANSMISSIONS, getYearOptions } from '@/lib/carOptions'
 import type { Supplier } from '@/lib/supabase/types'
 
 interface CarFormProps {
@@ -36,6 +36,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const [fuelType, setFuelType] = useState<string>(DEFAULT_FUEL_TYPE)
   const [drivetrain, setDrivetrain] = useState('')
   const [engineLayout, setEngineLayout] = useState('')
+  const [condition, setCondition] = useState('')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -61,6 +62,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       fuel_type: fuelType,
       drivetrain,
       engine_layout: engineLayout,
+      condition,
     })
     if (!parsed.success) {
       setError(formatCarFormErrors(parsed.error))
@@ -88,7 +90,6 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           make: parsed.data.make,
           model: parsed.data.model,
           year: parsed.data.year,
-          trim: (form.get('trim') as string) || null,
           body_type: parsed.data.body_type,
           transmission: parsed.data.transmission,
           fuel_type: parsed.data.fuel_type,
@@ -97,7 +98,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           interior_colour: (form.get('interior_colour') as string) || null,
           engine_layout: parsed.data.engine_layout,
           drivetrain: parsed.data.drivetrain,
-          condition: (form.get('condition') as string) || null,
+          condition: parsed.data.condition,
           description: (form.get('description') as string) || null,
           key_features: keyFeaturesRaw
             ? keyFeaturesRaw.split(',').map((s) => s.trim()).filter(Boolean)
@@ -167,8 +168,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
         <Field label="Cost price (₦, admin only)"><Input name="cost_price_ngn" type="number" min={0} /></Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Field label="Trim"><Input name="trim" /></Field>
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Body type">
           <ConstrainedSelect
             name="body_type"
@@ -178,7 +178,15 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
             placeholder="Select body type…"
           />
         </Field>
-        <Field label="Condition"><Input name="condition" /></Field>
+        <Field label="Condition">
+          <ConstrainedSelect
+            name="condition"
+            options={CONDITIONS}
+            value={condition}
+            onChange={setCondition}
+            placeholder="Select condition…"
+          />
+        </Field>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
