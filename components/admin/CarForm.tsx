@@ -25,6 +25,15 @@ const YEAR_OPTIONS = getYearOptions()
 // looking at the field.
 const SUGGEST_DEBOUNCE_MS = 500
 
+// Enough of the car to cover both the body and the cabin without paying for
+// every photo in a twenty-shot upload.
+const COLOUR_SUGGESTION_PHOTOS = 3
+
+interface ColourSuggestions {
+  exterior_colour?: string | null
+  interior_colour?: string | null
+}
+
 interface SpecSuggestions {
   body_type?: string | null
   drivetrain?: string | null
@@ -66,6 +75,15 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const [interiorColour, setInteriorColour] = useState('')
 
   const [specSuggestions, setSpecSuggestions] = useState<SpecSuggestions>({})
+  const [colourSuggestions, setColourSuggestions] = useState<ColourSuggestions>({})
+
+  // Keyed on the paths themselves rather than the `images` array so that
+  // setting a cover photo or reordering — which rebuilds the array without
+  // changing which cars are pictured — doesn't fire another vision call.
+  const colourPhotoKey = images
+    .slice(0, COLOUR_SUGGESTION_PHOTOS)
+    .map((image) => image.storagePath)
+    .join(',')
 
   // Asks for likely specs once Make, Model and Year are all present. Nothing
   // here writes to a field — it only populates the chips, so an in-flight or
@@ -111,6 +129,45 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       controller.abort()
     }
   }, [make, model, year])
+
+  // Runs once an upload has settled — ImageUploader only calls onChange after
+  // every file in the batch has finished uploading, so by the time this key
+  // changes the photos are readable at their public URLs. Same shape as the
+  // spec effect above, and the same guarantee: chips only, never a write.
+  useEffect(() => {
+    const storagePaths = colourPhotoKey ? colourPhotoKey.split(',') : []
+    const controller = new AbortController()
+
+    const timer = setTimeout(async () => {
+      if (storagePaths.length === 0) {
+        setColourSuggestions({})
+        return
+      }
+
+      try {
+        const res = await fetch('/api/admin/suggest-colours', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePaths }),
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+
+        const data = (await res.json()) as ColourSuggestions
+        setColourSuggestions({
+          exterior_colour: typeof data.exterior_colour === 'string' ? data.exterior_colour : null,
+          interior_colour: typeof data.interior_colour === 'string' ? data.interior_colour : null,
+        })
+      } catch {
+        // Same as above — a failed or aborted call simply means no chip.
+      }
+    }, SUGGEST_DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [colourPhotoKey])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -293,12 +350,20 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
             value={exteriorColour}
             onChange={(e) => setExteriorColour(e.target.value)}
           />
+          <SuggestionChip
+            value={colourSuggestions.exterior_colour ?? null}
+            onAccept={setExteriorColour}
+          />
         </Field>
         <Field label="Interior colour">
           <Input
             name="interior_colour"
             value={interiorColour}
             onChange={(e) => setInteriorColour(e.target.value)}
+          />
+          <SuggestionChip
+            value={colourSuggestions.interior_colour ?? null}
+            onAccept={setInteriorColour}
           />
         </Field>
         <Field label="Drivetrain">
