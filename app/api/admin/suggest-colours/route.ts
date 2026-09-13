@@ -43,7 +43,7 @@ Rules:
 - Report a colour only from what you can actually see. If none of the photos show the car's exterior, return null for exterior_colour; if none show the cabin, return null for interior_colour. The two are independent.
 - Return null when lighting, shadow or a reflection leaves you genuinely unsure. A blank field is better than a confident wrong colour in a public listing.
 - Prefer plain showroom wording where it fits what you see: Black, White, Silver, Grey, Blue, Red, Green, Gold, Beige, Brown, Burgundy, Orange, Yellow. Use a more specific name only when the plain one would misdescribe the car.
-- Answer with the colour alone — "Silver", not "the car appears to be silver".`
+- Answer with a short colour name or a 2-3 word phrase only — e.g. "Silver", "Metallic Silver", "Pearl White". Never a sentence, never a hedge, and never framing like "the car appears to be" or "looks like". Just the colour.`
 
 export async function POST(request: NextRequest) {
   const refusal = await refuseUnlessAdmin('suggest-colours')
