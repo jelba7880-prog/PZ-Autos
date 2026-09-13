@@ -33,6 +33,9 @@ export type EngineLayout = (typeof ENGINE_LAYOUTS)[number]
 export const BODY_TYPES = ['Sedan', 'SUV', 'Coupe', 'Hatchback', 'Truck', 'Bus'] as const
 export type BodyType = (typeof BODY_TYPES)[number]
 
+export const CONDITIONS = ['New', 'Foreign Used', 'Local Used'] as const
+export type Condition = (typeof CONDITIONS)[number]
+
 // Starter list of common Nigerian-market makes/models — not exhaustive.
 // Inventory is broker-sourced and not limited to these brands, so the
 // Make/Model combobox (components/admin/MakeModelFields.tsx) always allows

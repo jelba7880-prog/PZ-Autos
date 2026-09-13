@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import {
   BODY_TYPES,
+  CONDITIONS,
   CURRENT_YEAR,
   DRIVETRAINS,
   ENGINE_LAYOUTS,
@@ -18,14 +19,22 @@ import {
 // car's own current value when it isn't already in the list. New selections
 // are still confined to the canonical options; only the untouched legacy
 // value is grandfathered in.
-function constrainedField<T extends readonly [string, ...string[]]>(options: T, legacyValue?: string | null) {
+function constrainedField<T extends readonly [string, ...string[]]>(
+  options: T,
+  legacyValue?: string | null,
+  requiredMessage?: string
+) {
   const allowed: [string, ...string[]] =
     legacyValue && !(options as readonly string[]).includes(legacyValue) ? [...options, legacyValue] : [...options]
 
-  return z.preprocess(
+  const preprocessed = z.preprocess(
     (value) => (typeof value === 'string' && value.trim() ? value.trim() : null),
     z.enum(allowed).nullable()
   )
+
+  return requiredMessage
+    ? preprocessed.refine((value) => value !== null, { message: requiredMessage })
+    : preprocessed
 }
 
 export interface CarFormLegacyValues {
@@ -34,6 +43,7 @@ export interface CarFormLegacyValues {
   drivetrain?: string | null
   engine_layout?: string | null
   body_type?: string | null
+  condition?: string | null
 }
 
 export function buildCarFormSchema(legacy: CarFormLegacyValues = {}) {
@@ -50,6 +60,7 @@ export function buildCarFormSchema(legacy: CarFormLegacyValues = {}) {
     fuel_type: constrainedField(FUEL_TYPES, legacy.fuel_type),
     drivetrain: constrainedField(DRIVETRAINS, legacy.drivetrain),
     engine_layout: constrainedField(ENGINE_LAYOUTS, legacy.engine_layout),
+    condition: constrainedField(CONDITIONS, legacy.condition, 'Condition is required'),
   })
 }
 
