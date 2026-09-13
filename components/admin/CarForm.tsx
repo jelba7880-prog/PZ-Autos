@@ -58,6 +58,12 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const [drivetrain, setDrivetrain] = useState('')
   const [engineLayout, setEngineLayout] = useState('')
   const [condition, setCondition] = useState('')
+  // Controlled like every other suggestible field. These two were read out of
+  // FormData at submit time, which is fine for typing but leaves nothing for a
+  // suggestion to write into. Empty string still submits as null, exactly as
+  // the FormData read did.
+  const [exteriorColour, setExteriorColour] = useState('')
+  const [interiorColour, setInteriorColour] = useState('')
 
   const [specSuggestions, setSpecSuggestions] = useState<SpecSuggestions>({})
 
@@ -162,8 +168,8 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           transmission: parsed.data.transmission,
           fuel_type: parsed.data.fuel_type,
           mileage_km: form.get('mileage_km') ? Number(form.get('mileage_km')) : null,
-          exterior_colour: (form.get('exterior_colour') as string) || null,
-          interior_colour: (form.get('interior_colour') as string) || null,
+          exterior_colour: exteriorColour || null,
+          interior_colour: interiorColour || null,
           engine_layout: parsed.data.engine_layout,
           drivetrain: parsed.data.drivetrain,
           condition: parsed.data.condition,
@@ -281,8 +287,20 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Exterior colour"><Input name="exterior_colour" /></Field>
-        <Field label="Interior colour"><Input name="interior_colour" /></Field>
+        <Field label="Exterior colour">
+          <Input
+            name="exterior_colour"
+            value={exteriorColour}
+            onChange={(e) => setExteriorColour(e.target.value)}
+          />
+        </Field>
+        <Field label="Interior colour">
+          <Input
+            name="interior_colour"
+            value={interiorColour}
+            onChange={(e) => setInteriorColour(e.target.value)}
+          />
+        </Field>
         <Field label="Drivetrain">
           <ConstrainedSelect
             name="drivetrain"
