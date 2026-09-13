@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SupplierPicker } from './SupplierPicker'
 import { ImageUploader, type PendingImage } from './ImageUploader'
 import { MakeModelFields } from './MakeModelFields'
 import { ConstrainedSelect } from './ConstrainedSelect'
+import { SuggestionChip } from './SuggestionChip'
 import { Field } from './FormField'
 import { createCarWithImages } from '@/lib/supabase/storage'
 import { generateCarSlug } from '@/lib/slugify'
@@ -18,6 +19,35 @@ interface CarFormProps {
 }
 
 const YEAR_OPTIONS = getYearOptions()
+
+// Long enough that typing "Corolla" one letter at a time fires one request
+// rather than seven, short enough that the chip lands while the admin is still
+// looking at the field.
+const SUGGEST_DEBOUNCE_MS = 500
+
+// Enough of the car to cover both the body and the cabin without paying for
+// every photo in a twenty-shot upload.
+const COLOUR_SUGGESTION_PHOTOS = 3
+
+interface ColourSuggestions {
+  exterior_colour?: string | null
+  interior_colour?: string | null
+}
+
+interface SpecSuggestions {
+  body_type?: string | null
+  drivetrain?: string | null
+  engine_layout?: string | null
+}
+
+// The route's response schema already confines it to these lists, so this is a
+// second line rather than the first: it exists so a schema drift, a stale
+// deployment, or a hand-crafted response can never put a value on screen that
+// the select couldn't hold. Same rule the form applies everywhere else — an
+// enum field takes a value only if it is exactly one of its options.
+function suggestionInOptions(options: readonly string[], value: unknown): string | null {
+  return typeof value === 'string' && options.includes(value) ? value : null
+}
 
 export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const router = useRouter()
@@ -37,6 +67,107 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
   const [drivetrain, setDrivetrain] = useState('')
   const [engineLayout, setEngineLayout] = useState('')
   const [condition, setCondition] = useState('')
+  // Controlled like every other suggestible field. These two were read out of
+  // FormData at submit time, which is fine for typing but leaves nothing for a
+  // suggestion to write into. Empty string still submits as null, exactly as
+  // the FormData read did.
+  const [exteriorColour, setExteriorColour] = useState('')
+  const [interiorColour, setInteriorColour] = useState('')
+
+  const [specSuggestions, setSpecSuggestions] = useState<SpecSuggestions>({})
+  const [colourSuggestions, setColourSuggestions] = useState<ColourSuggestions>({})
+
+  // Keyed on the paths themselves rather than the `images` array so that
+  // setting a cover photo or reordering — which rebuilds the array without
+  // changing which cars are pictured — doesn't fire another vision call.
+  const colourPhotoKey = images
+    .slice(0, COLOUR_SUGGESTION_PHOTOS)
+    .map((image) => image.storagePath)
+    .join(',')
+
+  // Asks for likely specs once Make, Model and Year are all present. Nothing
+  // here writes to a field — it only populates the chips, so an in-flight or
+  // failed request is invisible to an admin filling the form by hand. The
+  // abort is what guarantees that: a response for "Camry" can never land after
+  // the admin has moved on to "Corolla".
+  useEffect(() => {
+    const trimmedMake = make.trim()
+    const trimmedModel = model.trim()
+    const controller = new AbortController()
+
+    const timer = setTimeout(async () => {
+      // Emptying one of the three trigger fields retracts the chips rather
+      // than leaving stale ones pointing at a car that is no longer described.
+      if (!trimmedMake || !trimmedModel || !year) {
+        setSpecSuggestions({})
+        return
+      }
+
+      try {
+        const res = await fetch('/api/admin/suggest-specs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ make: trimmedMake, model: trimmedModel, year: Number(year) }),
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+
+        const data = (await res.json()) as SpecSuggestions
+        setSpecSuggestions({
+          body_type: suggestionInOptions(BODY_TYPES, data.body_type),
+          drivetrain: suggestionInOptions(DRIVETRAINS, data.drivetrain),
+          engine_layout: suggestionInOptions(ENGINE_LAYOUTS, data.engine_layout),
+        })
+      } catch {
+        // Aborted, offline, or a malformed body — leave whatever chips are
+        // already on screen and never surface this to the admin.
+      }
+    }, SUGGEST_DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [make, model, year])
+
+  // Runs once an upload has settled — ImageUploader only calls onChange after
+  // every file in the batch has finished uploading, so by the time this key
+  // changes the photos are readable at their public URLs. Same shape as the
+  // spec effect above, and the same guarantee: chips only, never a write.
+  useEffect(() => {
+    const storagePaths = colourPhotoKey ? colourPhotoKey.split(',') : []
+    const controller = new AbortController()
+
+    const timer = setTimeout(async () => {
+      if (storagePaths.length === 0) {
+        setColourSuggestions({})
+        return
+      }
+
+      try {
+        const res = await fetch('/api/admin/suggest-colours', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storagePaths }),
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+
+        const data = (await res.json()) as ColourSuggestions
+        setColourSuggestions({
+          exterior_colour: typeof data.exterior_colour === 'string' ? data.exterior_colour : null,
+          interior_colour: typeof data.interior_colour === 'string' ? data.interior_colour : null,
+        })
+      } catch {
+        // Same as above — a failed or aborted call simply means no chip.
+      }
+    }, SUGGEST_DEBOUNCE_MS)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [colourPhotoKey])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -94,8 +225,8 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
           transmission: parsed.data.transmission,
           fuel_type: parsed.data.fuel_type,
           mileage_km: form.get('mileage_km') ? Number(form.get('mileage_km')) : null,
-          exterior_colour: (form.get('exterior_colour') as string) || null,
-          interior_colour: (form.get('interior_colour') as string) || null,
+          exterior_colour: exteriorColour || null,
+          interior_colour: interiorColour || null,
           engine_layout: parsed.data.engine_layout,
           drivetrain: parsed.data.drivetrain,
           condition: parsed.data.condition,
@@ -177,6 +308,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
             onChange={setBodyType}
             placeholder="Select body type…"
           />
+          <SuggestionChip value={specSuggestions.body_type ?? null} onAccept={setBodyType} />
         </Field>
         <Field label="Condition">
           <ConstrainedSelect
@@ -212,8 +344,28 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Exterior colour"><Input name="exterior_colour" /></Field>
-        <Field label="Interior colour"><Input name="interior_colour" /></Field>
+        <Field label="Exterior colour">
+          <Input
+            name="exterior_colour"
+            value={exteriorColour}
+            onChange={(e) => setExteriorColour(e.target.value)}
+          />
+          <SuggestionChip
+            value={colourSuggestions.exterior_colour ?? null}
+            onAccept={setExteriorColour}
+          />
+        </Field>
+        <Field label="Interior colour">
+          <Input
+            name="interior_colour"
+            value={interiorColour}
+            onChange={(e) => setInteriorColour(e.target.value)}
+          />
+          <SuggestionChip
+            value={colourSuggestions.interior_colour ?? null}
+            onAccept={setInteriorColour}
+          />
+        </Field>
         <Field label="Drivetrain">
           <ConstrainedSelect
             name="drivetrain"
@@ -222,6 +374,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
             onChange={setDrivetrain}
             placeholder="Select drivetrain…"
           />
+          <SuggestionChip value={specSuggestions.drivetrain ?? null} onAccept={setDrivetrain} />
         </Field>
       </div>
 
@@ -234,6 +387,7 @@ export function CarForm({ suppliers: initialSuppliers }: CarFormProps) {
             onChange={setEngineLayout}
             placeholder="Select engine layout…"
           />
+          <SuggestionChip value={specSuggestions.engine_layout ?? null} onAccept={setEngineLayout} />
         </Field>
         <Field label="Location (LGA — never a street address)"><Input name="location_area" placeholder="Ikeja" /></Field>
       </div>
